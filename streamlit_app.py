@@ -52,17 +52,17 @@ def draw_svg(lines):
         dwg.add(dwg.line(start=(x, 50), end=(x, LINE_HEIGHT), stroke='black', stroke_width=2))
     # 横線
     for (start, end) in lines:
-    x1 = start[0] * STEP + HORIZ_SPACING
-    x2 = end[0] * STEP + HORIZ_SPACING
-    y = start[1]
-    dwg.add(dwg.line(start=(x1, y), end=(x2, y), stroke='black', stroke_width=2))
+        x1 = start[0] * STEP + HORIZ_SPACING
+        x2 = end[0] * STEP + HORIZ_SPACING
+        y = start[1]
+        dwg.add(dwg.line(start=(x1, y), end=(x2, y), stroke='black', stroke_width=2))
     return dwg.tostring()
 
 # あみだくじ処理
 def follow_path(start_idx, lines):
     x = start_idx
     y = 50
-    path = sorted(lines, key=lambda l: l[0][1])  # Y順に
+    path = sorted(lines, key=lambda l: l[0][1])  # Y順にソート
     for (a, b) in path:
         if a[1] != y:
             continue
@@ -86,8 +86,9 @@ if st.button("▶ 結果を見る"):
     for i in range(NUM_LINES):
         name = player_names[i] if player_names[i] else f"（未選択{i+1}）"
         final_x = follow_path(i, lines)
-        final_pos = str(final_x + 1)
-        goal = GOAL_MAP.get(final_pos, "❓")
+        final_pos = str(final_x + 1)  # 1-originに変換
+        goal = GOAL_MAP.get(final_pos, "❓")  # こっそり置き換え
+
         result_table.append({
             "スタート番号": i + 1,
             "プレイヤー": name,
