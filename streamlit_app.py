@@ -1,126 +1,97 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import random
+import svgwrite
 
-# --------------------------
-# 設定
-# --------------------------
-
-NUM_COLS = 18
-NUM_ROWS = 12
-WIDTH = 900
-HEIGHT = 600
-COLUMN_SPACING = WIDTH / (NUM_COLS - 1)
-ROW_SPACING = HEIGHT / NUM_ROWS
-
-# 不正なゴールマッピング（自由に設定可能）
+# -------------------------------
+# 🎛 不正対応（好きなように設定可能）
+# -------------------------------
 GOAL_MAP = {
-    "1": "⑱",
-    "2": "⑰",
-    "3": "①",
-    "4": "②",
-    "5": "③",
-    "6": "④",
-    "7": "⑤",
-    "8": "⑥",
-    "9": "⑦",
-    "10": "⑧",
-    "11": "⑨",
-    "12": "⑩",
-    "13": "⑪",
-    "14": "⑫",
-    "15": "⑬",
-    "16": "⑭",
-    "17": "⑮",
-    "18": "⑯"
+    "1": "⑱", "2": "⑰", "3": "⑯", "4": "⑮", "5": "⑭",
+    "6": "⑬", "7": "⑫", "8": "⑪", "9": "⑩", "10": "⑨",
+    "11": "⑧", "12": "⑦", "13": "⑥", "14": "⑤", "15": "④",
+    "16": "③", "17": "②", "18": "①"
 }
-PLAYER_NAMES = [f"プレイヤー{i+1}" for i in range(NUM_COLS)]
-START_POINTS = [str(i + 1) for i in range(NUM_COLS)]
 
-# --------------------------
-# 状態初期化
-# --------------------------
+st.set_page_config(layout="wide", page_title="不正あみだくじ")
 
-if "amidakuji_lines" not in st.session_state:
-    # 横線ランダム生成
-    st.session_state.amidakuji_lines = []
-    for row in range(NUM_ROWS):
-        for col in range(NUM_COLS - 1):
-            if random.random() < 0.2:
-                st.session_state.amidakuji_lines.append((col, row))
+st.title("🎯 不正あみだくじ（18人用）")
+st.caption("スタート地点にプレイヤーを割り当て、ゴールは事前設定されたものに従って不正に到達します。")
 
-if "player_assignment" not in st.session_state:
-    st.session_state.player_assignment = {col: "" for col in START_POINTS}
+NUM_LINES = 18
+LINE_LENGTH = 600
+LINE_HEIGHT = 600
+STEP = LINE_LENGTH // (NUM_LINES - 1)
+HORIZ_SPACING = 40
 
-if "show_result" not in st.session_state:
-    st.session_state.show_result = False
+# プレイヤー選択（1〜18人）
+st.subheader("🎮 各スタート地点にプレイヤーを割り当ててください")
 
-# --------------------------
-# SVG描画
-# --------------------------
+player_names = ["" for _ in range(NUM_LINES)]
+cols = st.columns(NUM_LINES)
+for i in range(NUM_LINES):
+    with cols[i]:
+        player_names[i] = st.selectbox(f"", options=[""] + [f"Player {j+1}" for j in range(NUM_LINES)], key=f"p{i}")
+        st.markdown(f"<small>{i+1}</small>", unsafe_allow_html=True)
 
-def generate_svg():
-    svg = f'<svg width="{WIDTH}" height="{HEIGHT+80}" xmlns="http://www.w3.org/2000/svg">\n'
+# ランダムな横線生成
+def generate_lines():
+    lines = []
+    for y in range(50, LINE_HEIGHT, 30):
+        candidates = list(range(NUM_LINES - 1))
+        random.shuffle(candidates)
+        for i in candidates[:random.randint(2, 5)]:
+            lines.append(((i, y), (i + 1, y)))
+    return lines
 
-    # 縦線描画
-    for i in range(NUM_COLS):
-        x = i * COLUMN_SPACING
-        svg += f'<line x1="{x}" y1="0" x2="{x}" y2="{HEIGHT}" stroke="black" stroke-width="2"/>\n'
+# SVGの描画
+def draw_svg(lines):
+    dwg = svgwrite.Drawing(size=(LINE_LENGTH + 2*HORIZ_SPACING, LINE_HEIGHT + 100))
+    # 縦線
+    for i in range(NUM_LINES):
+        x = i * STEP + HORIZ_SPACING
+        dwg.add(dwg.line(start=(x, 50), end=(x, LINE_HEIGHT), stroke='black', stroke_width=2))
+    # 横線
+    for (start, end) in lines:
+        x1 = start * STEP + HORIZ_SPACING
+        x2 = end * STEP + HORIZ_SPACING
+        y = start[1]
+        dwg.add(dwg.line(start=(x1, y), end=(x2, y), stroke='black', stroke_width=2))
+    return dwg.tostring()
 
-    # 横線描画
-    for col, row in st.session_state.amidakuji_lines:
-        x1 = col * COLUMN_SPACING
-        x2 = (col + 1) * COLUMN_SPACING
-        y = row * ROW_SPACING
-        svg += f'<line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="black" stroke-width="2"/>\n'
+# あみだくじ処理
+def follow_path(start_idx, lines):
+    x = start_idx
+    y = 50
+    path = sorted(lines, key=lambda l: l[0][1])  # Y順に
+    for (a, b) in path:
+        if a[1] != y:
+            continue
+        if a[0] == x:
+            x = b[0]
+        elif b[0] == x:
+            x = a[0]
+    return x
 
-    # スタート番号描画
-    for i in range(NUM_COLS):
-        x = i * COLUMN_SPACING
-        svg += f'<text x="{x}" y="-10" text-anchor="middle" font-size="14">{i+1}</text>\n'
+# 横線生成と描画
+lines = generate_lines()
+svg = draw_svg(lines)
+st.subheader("🖼 あみだくじ")
+st.components.v1.html(svg, height=LINE_HEIGHT + 120, scrolling=False)
 
-    # ゴール（〇数字）描画（非表示にしたい場合はコメントアウト）
-    if st.session_state.show_result:
-        for i in range(NUM_COLS):
-            x = i * COLUMN_SPACING
-            goal = GOAL_MAP[str(i+1)]
-            svg += f'<text x="{x}" y="{HEIGHT + 30}" text-anchor="middle" font-size="16">{goal}</text>\n'
-    else:
-        for i in range(NUM_COLS):
-            x = i * COLUMN_SPACING
-            svg += f'<text x="{x}" y="{HEIGHT + 30}" text-anchor="middle" font-size="16">？？？</text>\n'
-
-    svg += '</svg>'
-    return svg
-
-# --------------------------
-# Streamlit UI
-# --------------------------
-
-st.title("🎯 不正あみだくじ（18人用・SVG）")
-st.markdown("ランダムなあみだくじを表示しつつ、裏で不正にゴールを設定できます。")
-
-# SVG表示
-svg_code = generate_svg()
-components.html(svg_code, height=HEIGHT+100)
-
-# プレイヤー設定
-st.subheader("スタート番号にプレイヤーを割り当ててください")
-for col in START_POINTS:
-    st.session_state.player_assignment[col] = st.selectbox(
-        f"{col}番スタートのプレイヤー",
-        [""] + PLAYER_NAMES,
-        key=f"player_{col}"
-    )
-
-# 結果表示ボタン
+# 実行ボタン
 if st.button("▶ 結果を見る"):
-    st.session_state.show_result = True
-
-# 結果表示
-if st.session_state.show_result:
     st.subheader("🎉 結果発表")
-    for start, player in st.session_state.player_assignment.items():
-        if player:
-            result = GOAL_MAP[start]
-            st.markdown(f"**{player} → {result}**")
+
+    result_table = []
+    for i in range(NUM_LINES):
+        name = player_names[i] if player_names[i] else f"（未選択{i+1}）"
+        final_x = follow_path(i, lines)
+        final_pos = str(final_x + 1)
+        goal = GOAL_MAP.get(final_pos, "❓")
+        result_table.append({
+            "スタート番号": i + 1,
+            "プレイヤー": name,
+            "到達ゴール": goal
+        })
+
+    st.table(result_table)
