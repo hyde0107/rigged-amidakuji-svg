@@ -52,10 +52,10 @@ def draw_svg(lines):
         dwg.add(dwg.line(start=(x, 50), end=(x, LINE_HEIGHT), stroke='black', stroke_width=2))
     # 横線
     for (start, end) in lines:
-        x1 = start * STEP + HORIZ_SPACING
-        x2 = end * STEP + HORIZ_SPACING
-        y = start[1]
-        dwg.add(dwg.line(start=(x1, y), end=(x2, y), stroke='black', stroke_width=2))
+    x1 = start[0] * STEP + HORIZ_SPACING
+    x2 = end[0] * STEP + HORIZ_SPACING
+    y = start[1]
+    dwg.add(dwg.line(start=(x1, y), end=(x2, y), stroke='black', stroke_width=2))
     return dwg.tostring()
 
 # あみだくじ処理
