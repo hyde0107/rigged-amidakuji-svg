@@ -1,60 +1,40 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 import random
 
-N = 6
-participants = [f"参加者{i+1}" for i in range(N)]
-default_goals = [f"ゴール{i+1}" for i in range(N)]
+N = 6  # 縦線の本数
+max_horizontal = 10  # 横線の本数
 
-def generate_ladders(n, max_lines=10):
+def generate_ladders(n, max_lines):
     ladders = []
     for _ in range(max_lines):
-        pos = random.randint(0, n-2)
-        height = random.random()
-        ladders.append((pos, height))
+        x = random.randint(0, n-2)  # 横線の位置（縦線間）
+        y = random.uniform(0, 1)    # 高さ（0〜1）
+        ladders.append((x, y))
     ladders.sort(key=lambda x: x[1])
     return ladders
 
-def traverse(start_idx, ladders, n):
-    pos = start_idx
-    for (line_pos, _) in ladders:
-        if pos == line_pos:
-            pos += 1
-        elif pos == line_pos + 1:
-            pos -= 1
-    return pos
+def draw_amidakuji(n, ladders):
+    fig, ax = plt.subplots(figsize=(6, 8))
 
-st.title("シンプルあみだくじ")
+    # 縦線を描く
+    for i in range(n):
+        ax.plot([i, i], [0, 1], color="black", linewidth=2)
 
-# 参加者選択
-start_selection = []
-for i in range(N):
-    sel = st.selectbox(f"スタート位置{i+1}の参加者を選択", participants, key=f"start_{i}")
-    start_selection.append(sel)
+    # 横線を描く
+    for (x, y) in ladders:
+        ax.plot([x, x+1], [y, y], color="black", linewidth=2)
 
-ladders = generate_ladders(N)
-st.write("横線一覧 (縦線間の位置と高さ):")
-for (pos, height) in ladders:
-    st.write(f"{pos} と {pos+1} の間、高さ {height:.2f}")
+    # 軸の調整
+    ax.set_xlim(-0.5, n - 0.5)
+    ax.set_ylim(0, 1)
+    ax.axis('off')  # 軸非表示
 
-# あみだくじ経路計算
-goal_positions = [traverse(i, ladders, N) for i in range(N)]
+    return fig
 
-# 【ここだけあなたが書き換えてください】
-# スタートインデックス -> ゴール結果の対応を自由に設定できるように
-# 例：0番スタートは"ゴールA", 1番スタートは"ゴールB" ... みたいに
-goal_mapping = {
-    0: "ゴールX",
-    1: "ゴールY",
-    2: "ゴールZ",
-    3: "ゴールW",
-    4: "ゴールV",
-    5: "ゴールU",
-}
+st.title("あみだくじ線の描画")
 
-if st.button("結果を見る"):
-    st.write("=== あみだくじの結果 ===")
-    for i, part in enumerate(start_selection):
-        final_pos = goal_positions[i]
-        # goal_mappingが設定されていればそちらを使う。なければdefault_goalsから
-        goal_result = goal_mapping.get(final_pos, default_goals[final_pos])
-        st.write(f"{part} → {goal_result}")
+ladders = generate_ladders(N, max_horizontal)
+
+fig = draw_amidakuji(N, ladders)
+st.pyplot(fig)
